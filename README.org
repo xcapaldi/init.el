@@ -1,0 +1,529 @@
+#+TITLE: 0 to LSP: Emacs init.el From Scratch
+#+AUTHOR: Xavier Capaldi
+#+PROPERTY: header-args  :tangle "init.el"
+
+* Inspiration
+[[https://github.com/ThePrimeagen][ThePrimeagen]] created a [[https://www.youtube.com/watch?v=w7i4amO_zaE][YouTube video]] detailing his process of going from a vanilla NeoVim install to a fully configured minimal editor with LSP.
+The video seems popular and since its release I've seen several others in a similar vein.
+However all the videos are targetted at Vim or NeoVim.
+I wanted to create a similar guide for new Emacs users.
+I think Emacs is a wonderful editor but it is so configurable, one user's config may be unreadable to a new user.
+The goal of this repository is to create a similar guide to creating a basic configuration that somewhat mimics the basic functionality in ThePrimeagen's video.
+If you're curious, why emacs, I recommend the [[https://github.com/remacs/remacs#why-emacs][remacs readme]] which explains it quite well.
+For me, the killer feature of emacs is not a particular package (org-mode, magit) but rather the fact that the entire system is hackable.
+You, as the user, feel empowered to modify the system to your needs.
+Some of the choices made in this guide are because of this philosophy which may not match with other emacs users.
+
+* Why not literate config
+If you already know emacs, you may wonder why I don't suggest a literate configuration using org-mode.
+The main reason is that it is another layer of complexity for a new user.
+Already learning the basics of emacs and elisp is enough without adding org-mode or the tangling logic.
+You can always add it later.
+
+* Read the manual
+This guide doesn't go into a lot of detail as to how much emacs or these packages can be configured.
+Nor does it give a tutorial on the basic usage of emacs itself.
+I have included links to the relevant resource for every package.
+Feel free to use the config as is, but I do recommend reading the documentation.
+Emacs doesn't hold your hand.
+I find I interact with it almost the same as I interact with Golang; constantly checking documentation and the source and get my desired result.
+
+* Alternative motion schemes
+If you're trying emacs after working in a vim-like editor, you may be tempted to use [[https://github.com/emacs-evil/evil][evil]] which is a vim emulation package in emacs.
+It's an excellent emulation but requires a lot of modification to make it work nicely with emacs' countless modes.
+Instead I suggest you try vanilla emacs at first.
+If you're really set on a modal editing environment, look at [[https://github.com/meow-edit/meow][meow]] which is selection-based modal editing mode inspired by [[https://kakoune.org/][kakaoune]].
+It works nicely with the emacs built-ins.
+
+* Configuration
+The emacs configuration should be stored in your XDG-compatible config directory: =~/.config/emacs/=.
+Alternatively you can use =~/.emacs.d/= or any of [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Init-File.html][several other locations]].
+The location on Windows can be determined by [[https://www.gnu.org/software/emacs/manual/html_node/efaq-w32/Location-of-init-file.html#Location-of-init-file][following this FAQ]].
+You just need an =init.el= as your main configuration.
+If you use the =straight.el= package manager, you'll also need an =early-init.el=.
+You could split your configuration into many files and ~require~ them in your central config but at this point, you don't need that complexity.
+The whole configuration detailed here is less than 150 lines.
+Note that you should follow the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Key-Binding-Conventions.html][keybinding conventions]] when adding your own keybindings to this configuration.
+
+* Package manager and package configuration manager
+For this configuration, we need two key components: a package manager and a package configuration manager.
+Emacs has a built-in package manager, =package.el=, which is fine and works well.
+I prefer an external package manager, =straight.el=, which gives you more power to customize and contribute at the cost of some more time managing your configuration.
+For the package configuration manager, use [[https://github.com/jwiegley/use-package][use-package]].
+It allows you to manage all configurations related to a single package in one code block.
+It can also defer the loading of packages, making your emacs startup faster.
+
+** package.el
+=package.el= is the built-in package manager.
+It downloads pre-compiled packages from package repositories, not unlike any other system package manager.
+
+To set it up, install =use-package=, and configure =use-package= to automatically install package if they aren't present already:
+
+#+BEGIN_SRC emacs-lisp
+(require 'package)
+
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+(package-initialize)
+
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+(require 'use-package)
+(setq use-package-always-ensure t)
+#+END_SRC
+
+Unfortunately =package.el= has a few annoying features.
+First it is not declarative, so your configuration doesn't guarantee the state.
+Second, it modifies your =init.el=.
+After running your configuration for the first time, you'll see something like this:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   '(minions eglot magit tree-sitter-langs tree-sitter kind-icon corfu embark-consult embark orderless consult marginalia vertico exec-path-from-shell use-package)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+#+END_SRC
+
+As the comments state, you should not modify it.
+
+** straight.el
+[[https://github.com/radian-software/straight.el]]
+
+The built-in package manager is fine but I think that =straight.el= encourages users to modify the source and contribute upstream.
+Their readme details the benefits of =straight.el= but, in summary, every package is just a cloned git repo.
+You can pin to a particular commit and/or branch.
+Since it is just git, it is easy for you contribute to the package.
+The only disadvantage of =straight.el= is that you are working with the development versions of packages.
+There may be bugs or incompatibilities and this is especially prevalent right now as emacs 29 is nearing release.
+I still think =straight.el= is great but for a novice user, you could start with the built-in system.
+
+First you'll need to create an [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Early-Init-File.html][early init file]] which is loaded before the graphical system or package manager.
+We just disable the built-in =package.el= in that file:
+
+#+BEGIN_SRC emacs-lisp
+(setq package-enable-at-startup nil)
+#+END_SRC
+
+Then similar to the built-in configuration, we bootstrap =straight.el=, install =use-package= and configure it to install packages by default:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 6))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+
+(straight-use-package 'use-package)
+(setq straight-use-package-by-default t)
+#+END_SRC
+
+Nothing else that follows needs to chanage except for a single package that is not available in a package repository.
+In that case, =straight.el= can handle it easily out of the box.
+
+* General settings
+Here are some general setting that will make your initial experience with emacs nicer:
+
+#+BEGIN_SRC emacs-lisp
+(setq-default
+ coding-system-for-read 'utf-8                 ; Use UTF-8 by default
+ coding-system-for-write 'utf-8
+ help-window-select t                          ; Focus new help windows when opened
+ indent-tabs-mode nil                          ; Prefer spaces over tabs
+ indicate-empty-lines t                        ; Display bitmap in left fringe on empty lines
+ inhibit-startup-screen t                      ; Remove default start screen
+ ring-bell-function 1                          ; Use a visual bell
+ visible-bell t                                ; Use a visual bell
+ select-enable-clipboard t                     ; Merge emacs and system clipboard
+ tab-always-indent 'complete                   ; Use tab as a completion instead of C-M-i
+ read-extended-command-predicate #'command-completion-default-include-p ; Hide commands in M-x not apply to current mode
+ tab-width 4                                   ; Set width for tabs
+ truncate-lines t                              ; Don't wrap lines by default
+ view-read-only t                              ; Always open read-only buffers in view-mode
+ vc-follow-symlinks t                          ; Don't ask for confirmation following symlinked files
+ mouse-wheel-scroll-amount '(1 ((shift) . 1))  ; Mouse scroll one line at a time
+ mouse-wheel-progressive-speed nil             ; Don't accelerate scrolling
+ mouse-wheel-follow-mouse t                    ; Scroll window under mouse
+ scroll-step 1                                 ; Keyboard scroll one line at a time
+ scroll-conservatively 10000
+ auto-window-vscroll nil)
+#+END_SRC
+
+** General modes
+You may choose to keep the menu, tool and scrollbars if you're new the emacs.
+They are actually quite useful.
+However if you want a minimal editor, disabling them makes the emacs UI cleaner.
+
+#+BEGIN_SRC emacs-lisp
+(global-hl-line-mode 0)                       ; Highlight current line
+(global-display-fill-column-indicator-mode 0) ; Add indicator for the fill line
+(column-number-mode 1)                        ; Show the column number
+(fset 'yes-or-no-p 'y-or-n-p)                 ; Replace yes/no prompts with y/n
+(tool-bar-mode -1)                            ; Hide the toolbar
+(menu-bar-mode -1)                            ; Hide the menubar
+(tooltip-mode -1)                             ; Remove mouse hover tooltips
+(scroll-bar-mode -1)                          ; Hide the scrollbar
+(blink-cursor-mode 0)                         ; Don't blink the cursor
+(show-paren-mode 1)                           ; Show matching parens
+#+END_SRC
+
+** Backups
+Emacs automatically creates backups which can clutter your file system.
+Rather than disabling the feature entirely, we can set a central directory to store all backups and configure them to autodelete the oldest versions.
+
+#+BEGIN_SRC emacs-lisp
+(setq backup-directory-alist `(("." . "~/.backups/"))
+      backup-by-copying t
+      version-control t
+      delete-old-versions nil
+      kept-new-versions 20
+      kept-old-versions 5)
+#+END_SRC
+
+** Font
+This block will set the font to =JetBrains Mono= with size =13= and a line spacing of =1.2=.
+Adjust to match your desired settings.
+
+#+BEGIN_SRC emacs-lisp
+(progn (set-face-attribute 'default nil
+                           :family "JetBrains Mono"
+                           :height 130
+                           :weight 'medium)
+       (setq line-spacing 0.2))
+#+END_SRC
+
+** Theme
+I like the built-in [[https://protesilaos.com/emacs/modus-themes][modus themes]].
+They are accessible themes that are quite easy on the eye.
+You can set the default theme to the light theme:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(load-theme 'modus-operandi t)
+#+END_SRC
+
+Or to the dark theme:
+
+#+BEGIN_SRC emacs-lisp
+(load-theme 'modus-vivendi t)
+#+END_SRC
+
+In either case there is a utility command, =modus-themes-toggle= which you can invoke to switch back and forth between light and dark mode.
+
+* Packages
+** exec-path-from-shell
+[[https://github.com/purcell/exec-path-from-shell]]
+
+This package ensures the shell environment variables are also present in emacs.
+This is often an issue on MacOS and can be quite frustrating for a new user.
+
+#+BEGIN_SRC emacs-lisp
+(use-package exec-path-from-shell
+  :init
+  (when (memq window-system '(mac ns x))
+    (exec-path-from-shell-initialize)))
+#+END_SRC
+
+** subword
+In programming modes, we want to navigate by subword (useful in camel-case languages):
+
+#+BEGIN_SRC emacs-lisp
+(use-package subword
+  :ensure nil
+  :hook prog-mode)
+#+END_SRC
+
+Doing this with =straight.el= is slightly different:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(use-package subword
+  :straight (:type built-in)
+  :hook prog-mode)
+#+END_SRC
+
+** linum
+In programming modes, we want line numbers:
+
+#+BEGIN_SRC emacs-lisp
+(use-package linum
+  :ensure nil
+  :hook prog-mode)
+#+END_SRC
+
+Doing this with =straight.el= is slightly different:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(use-package linum
+  :straight (:type built-in)
+  :hook prog-mode)
+#+END_SRC
+
+** vertico
+[[https://github.com/minad/vertico]]
+
+Emacs has several completion UIs including =fido= and =icomplete=.
+=vertico.el= is faithful to basic emacs behavior but has a nicer interface.
+In particular (as the name suggests), it displays options vertically as opposed to most of emacs' built-ins which display them horizontally.
+Several competant emacs users still rely on =icomplete= but I am more productive with =vertico= and I suspect most users new to emacs will be as well.
+
+#+BEGIN_SRC emacs-lisp
+(use-package vertico
+  :init
+  (vertico-mode))
+#+END_SRC
+
+** marginalia
+[[https://github.com/emacs-straight/marginalia]]
+
+=marginalia.el= adds additional information adjacent to minibuffer completions.
+
+#+BEGIN_SRC emacs-lisp
+(use-package marginalia
+  :bind (:map minibuffer-local-map
+              ("M-A" . marginalia-cycle))
+  :init
+  (marginalia-mode))
+#+END_SRC
+
+** consult
+[[https://github.com/minad/consult]]
+
+=consult.el= provides many helpful commands to replace the built-ins.
+In addition it has some new commands as well.
+The example =consult= configuration in their documentation is quite large but I've distilled it down to something smaller for this configuration.
+As you gain experience you can add more functionality to suit your needs.
+
+#+BEGIN_SRC emacs-lisp
+(use-package consult
+  :bind (([remap switch-to-buffer] . consult-buffer)
+         ([remap switch-to-buffer-other-window] . consult-buffer-other-window)
+         ([remap switch-to-buffer-other-frame] . consult-buffer-other-frame)
+         ([remap bookmark-jump] . consult-bookmark)
+         ([remap project-switch-to-buffer] . consult-project-buffer)
+         ([remap yank-pop] . consult-yank-pop)
+         :map isearch-mode-map
+         ([remap isearch-edit-string] . consult-isearch-history)
+         ("C-c l" . consult-line)
+         ("C-c L" . consult-line-multi)
+         :map minibuffer-local-map
+         ([remap next-matching-history-element] . consult-history)
+         ([remap previous-matching-history-element] . consult-history)))
+#+END_SRC
+
+** orderless
+[[https://github.com/oantolin/orderless]]
+
+The built-in completion styles are fine but once you've used =orderless= you will find any other completion style clunky.
+=orderless= implements a space separated regex completion.
+As with everything in emacs, this can be customed but the default works well.
+
+#+BEGIN_SRC emacs-lisp
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-defaults nil)
+  (completion-category-overrides '((file (styles . (partial-completion))))))
+#+END_SRC
+
+** embark
+[[https://github.com/oantolin/embark]]
+
+=embark= is like a context-aware right-click menu that is invoked via a keybinding.
+For example, you could place your point/cursor on a function in an elisp file and then call =embark-act=.
+It will display a set of options that are available in that context.
+Thus you could jump to the function definition without remembering the the keybinding or command to do so.
+Embark has a lot more functionality but that is the basic gist of things.
+
+#+BEGIN_SRC emacs-lisp
+(use-package embark
+  :bind
+  (("C-." . embark-act)
+   ("C-;" . embark-dwim)
+   ("C-h B" . embark-bindings))
+
+  :config
+  (add-to-list 'display-buffer-alist
+	     '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+	       nil
+	       (window-parameters (mode-line-format . none)))))
+#+END_SRC
+
+*** embark-consult
+[[https://elpa.gnu.org/packages/embark-consult.html]]
+
+We can add the integration package between =embark= and =consult= as well.
+
+#+BEGIN_SRC emacs-lisp
+(use-package embark-consult
+  :hook
+  (embark-collect-mode . consult-preview-at-point-mode))
+#+END_SRC
+
+** corfu
+[[https://github.com/minad/corfu]]
+
+This package provides a completion popup which integrates with LSP and emacs' built-in completion interfaces.
+It doesn't require any special configuration (although there are many options available).
+
+#+BEGIN_SRC emacs-lisp
+(use-package corfu
+  :init
+  (global-corfu-mode))
+#+END_SRC
+
+*** kind-icon
+[[https://github.com/jdtsmith/kind-icon]]
+
+If you want to add icons to =corfu=, setup =kind-icon= for this:
+
+#+BEGIN_SRC emacs-lisp
+(use-package kind-icon
+  :after corfu
+  :custom
+  (kind-icon-default-face 'corfu-default) ; to compute blended backgrounds correctly
+  :config
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+#+END_SRC
+
+** tree-sitter
+[[https://emacs-tree-sitter.github.io/]]
+
+Tree-sitter is integrated natively into emacs 29.
+For emacs 28, you'll need to install it as an external package.
+I don't think this is a critical package but I also don't take advantage of many of the advanced features of tree-sitter.
+
+#+BEGIN_SRC emacs-lisp
+(use-package tree-sitter
+  :init
+  (global-tree-sitter-mode 1))
+(use-package tree-sitter-langs)
+#+END_SRC
+
+** vundo
+[[https://github.com/casouri/vundo]]
+
+Emacs has a powerful [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Undo.html][undo system]] but it can be very hard to keep track of the undo state.
+=vundo.el= solves this by providing a visual interface to the built-in undo system.
+The only problem is that vundo is not in a package repository.
+Depending on whether you are using =package.el= or =straight.el= will determine how you can use this package.
+
+*** package.el
+Following the guidelines for [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Lisp-Libraries.html][lisp libraries]], you need to download the source code for vundo which is contained in a single file; =vundo.el=.
+Alternatively you can clone the repository with git.
+In either case, you want it to end up in =~/.config/emacs/site-lisp/vundo/vundo.el=.
+Then we can tell =use-package= where to load the library from:
+
+#+BEGIN_SRC emacs-lisp
+(use-package vundo
+  :load-path "site-lisp/vundo/"
+  :bind ("C-c u" . vundo))
+#+END_SRC
+
+*** straight.el
+=straight.el= already relies on git so we just need to tell it which repo the package is from:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(use-package vundo
+  :straight (vundo :type git :host github :repo "casouri/vundo")
+  :bind ("C-c u" . vundo))
+#+END_SRC
+
+** magit
+[[https://magit.vc/]]
+
+Emacs already has several features built-in for version control.
+If you're using git most of the time, consider using =magit= which a very powerful git porcelain.
+
+#+BEGIN_SRC emacs-lisp
+(use-package magit)
+#+END_SRC
+
+** eglot
+[[https://github.com/joaotavora/eglot]]
+
+=eglot= has been integrated as the built-in LSP client in emacs 29.
+I suggest using it for emacs 28 as an external package.
+=eglot= integrates tightly with built-in emacs functionality and does very little extra out of the box.
+
+#+BEGIN_SRC emacs-lisp
+(use-package eglot
+  :commands (eglot eglot-ensure))
+#+END_SRC
+
+You can start LSP integration in a buffer with =M-x eglot=.
+If you want eglot to start up by default in certain major modes you can add hooks in an ~:init~ block:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  :init
+  (add-hook 'go-mode-hook 'eglot-ensure)
+  (add-hook 'python-mode-hook 'eglot-ensure)
+#+END_SRC
+
+Note that =eglot= takes over built-in emacs commands.
+For example when =eglot= is active it will use the built-in ~xref-find-definitions~ (=M-.=) and ~xref-find-references~ (=M-?=).
+=eglot= add a few commands specific to LSP that you may want to bind for quick access:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  :bind (:map eglot-mode-map
+	 ([remap display-local-help] . eldoc-doc-buffer)
+	 ("C-c r" . eglot-rename)
+	 ("C-c o" . eglot-code-action-organize-imports)
+	 ("C-c f" . eglot-format)
+	 ("C-c h" . eldoc))
+#+END_SRC
+
+If you want =eglot= to format your buffer on save, check out [[https://gist.github.com/carlosrogue/777f43b4a46400cae21aaf9ba5ca5ccc#file-gopls-eglot-el-L22][this suggestion]] by carlosrogue.
+You can put the following (with hooks for the modes you want enabled) into your ~:config~ section:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (defun eglot-format-buffer-on-save ()
+    (add-hook 'before-save-hook #'eglot-format-buffer -10 t))
+  (add-hook 'go-mode-hook #'eglot-format-buffer-on-save)
+#+END_SRC
+
+There are other formatters which have been nicely compared [[https://docs.google.com/document/d/1bIURUdHqlkF8QfFDnOP4ZOHXADkEtB_mbzMVoBQEBSw/edit][here]] however for most use-cases, I think you can rely on ~eglot-format-buffer~.
+
+** minions
+[[https://github.com/tarsius/minions]]
+
+You may have noticed that the mode line can become very cluttered as various modes and minor modes compete for space.
+Most of the time, you don't care for a particular minor mode indicator.
+There are a several packages that allow you configure how modes are displayed or hidden:
+
+- [[https://github.com/myrjola/diminish.el][diminish.el]]
+- [[https://elpa.gnu.org/packages/delight.html][delight.el]]
+- [[https://github.com/alezost/dim.el][dim.el]]
+- [[https://github.com/radian-software/blackout][blackout.el]]
+
+These all require you to configure the display for each package.
+=minions.el= is much simpler to configure.
+It assumes by default that you do **not** want to see minor modes and hides them in a =;-)= menu.
+You can define modes that you want to be excluded from that blanket assumption.
+
+#+BEGIN_SRC emacs-lisp
+(use-package minions
+  :init
+  (minions-mode 1)
+  :custom
+  (minions-prominent-modes '(flymake-mode)))
+#+END_SRC
+
+=flymake-mode= is a example of a minor mode that display helpful information in the mode line.
+It shows the number of errors and warnings in the buffer.
+We can just add it as a member of the ~minions-prominent-modes~ so it is always displayed when active.
