@@ -1,17 +1,18 @@
-(require 'package)
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 6))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
 
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-
-(package-initialize)
-
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
-
-(require 'use-package)
-(setq use-package-always-ensure t)
-
-(setq package-enable-at-startup nil)
+(straight-use-package 'use-package)
+(setq straight-use-package-by-default t)
 
 (setq-default
  coding-system-for-read 'utf-8                 ; Use UTF-8 by default
@@ -36,6 +37,7 @@
  scroll-conservatively 10000
  auto-window-vscroll nil)
 
+(global-auto-revert-mode 1)                   ; Update buffer if file changes on disk
 (global-hl-line-mode 0)                       ; Highlight current line
 (global-display-fill-column-indicator-mode 0) ; Add indicator for the fill line
 (column-number-mode 1)                        ; Show the column number
@@ -68,11 +70,11 @@
     (exec-path-from-shell-initialize)))
 
 (use-package subword
-  :ensure nil
+  :straight (:type built-in)
   :hook prog-mode)
 
 (use-package linum
-  :ensure nil
+  :straight (:type built-in)
   :hook prog-mode)
 
 (use-package vertico
@@ -139,7 +141,7 @@
 (use-package tree-sitter-langs)
 
 (use-package vundo
-  :load-path "site-lisp/vundo/"
+  :straight (vundo :type git :host github :repo "casouri/vundo")
   :bind ("C-c u" . vundo))
 
 (use-package magit)

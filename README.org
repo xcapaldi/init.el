@@ -16,7 +16,8 @@ Some of the choices made in this guide are because of this philosophy which may 
 
 * Why not literate config
 If you already know emacs, you may wonder why I don't suggest a literate configuration using org-mode.
-The main reason is that it is another layer of complexity for a new user.
+In fact this very document can be used as a literate configuration with very little modification.
+The main reason I don't suggest this is that it is another layer of complexity for a new user.
 Already learning the basics of emacs and elisp is enough without adding org-mode or the tangling logic.
 You can always add it later.
 
@@ -59,7 +60,7 @@ It downloads pre-compiled packages from package repositories, not unlike any oth
 
 To set it up, install =use-package=, and configure =use-package= to automatically install package if they aren't present already:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (require 'package)
 
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
@@ -106,18 +107,21 @@ You can pin to a particular commit and/or branch.
 Since it is just git, it is easy for you contribute to the package.
 The only disadvantage of =straight.el= is that you are working with the development versions of packages.
 There may be bugs or incompatibilities and this is especially prevalent right now as emacs 29 is nearing release.
-I still think =straight.el= is great but for a novice user, you could start with the built-in system.
+However once you have a consistent system that works for you, you can use a combination of your =init.el= and the [[https://github.com/radian-software/straight.el#lockfile-management][straight.el lockfile]] to create a perfectly reproducible system.
+I still think =straight.el= is great but for a novice user, you could start with the built-in system if you find it overwhelming.
+That being said, the =init.el= associated with this repository is setup for =straight.el=.
+The differences between a =straight.el=-based config and a =package.el=-based config (as small as they are) are detailed throughout.
 
 First you'll need to create an [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Early-Init-File.html][early init file]] which is loaded before the graphical system or package manager.
 We just disable the built-in =package.el= in that file:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle early-init.el
 (setq package-enable-at-startup nil)
 #+END_SRC
 
 Then similar to the built-in configuration, we bootstrap =straight.el=, install =use-package= and configure it to install packages by default:
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
 (defvar bootstrap-version)
 (let ((bootstrap-file
        (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
@@ -172,6 +176,7 @@ They are actually quite useful.
 However if you want a minimal editor, disabling them makes the emacs UI cleaner.
 
 #+BEGIN_SRC emacs-lisp
+(global-auto-revert-mode 1)                   ; Update buffer if file changes on disk
 (global-hl-line-mode 0)                       ; Highlight current line
 (global-display-fill-column-indicator-mode 0) ; Add indicator for the fill line
 (column-number-mode 1)                        ; Show the column number
@@ -243,7 +248,7 @@ This is often an issue on MacOS and can be quite frustrating for a new user.
 ** subword
 In programming modes, we want to navigate by subword (useful in camel-case languages):
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (use-package subword
   :ensure nil
   :hook prog-mode)
@@ -251,7 +256,7 @@ In programming modes, we want to navigate by subword (useful in camel-case langu
 
 Doing this with =straight.el= is slightly different:
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
 (use-package subword
   :straight (:type built-in)
   :hook prog-mode)
@@ -260,7 +265,7 @@ Doing this with =straight.el= is slightly different:
 ** linum
 In programming modes, we want line numbers:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (use-package linum
   :ensure nil
   :hook prog-mode)
@@ -268,7 +273,7 @@ In programming modes, we want line numbers:
 
 Doing this with =straight.el= is slightly different:
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
 (use-package linum
   :straight (:type built-in)
   :hook prog-mode)
@@ -429,7 +434,7 @@ Alternatively you can clone the repository with git.
 In either case, you want it to end up in =~/.config/emacs/site-lisp/vundo/vundo.el=.
 Then we can tell =use-package= where to load the library from:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (use-package vundo
   :load-path "site-lisp/vundo/"
   :bind ("C-c u" . vundo))
@@ -438,7 +443,7 @@ Then we can tell =use-package= where to load the library from:
 *** straight.el
 =straight.el= already relies on git so we just need to tell it which repo the package is from:
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
 (use-package vundo
   :straight (vundo :type git :host github :repo "casouri/vundo")
   :bind ("C-c u" . vundo))
