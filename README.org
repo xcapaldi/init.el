@@ -60,7 +60,7 @@ It downloads pre-compiled packages from package repositories, not unlike any oth
 
 To set it up, install =use-package=, and configure =use-package= to automatically install package if they aren't present already:
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
 (require 'package)
 
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
@@ -109,19 +109,18 @@ The only disadvantage of =straight.el= is that you are working with the developm
 There may be bugs or incompatibilities and this is especially prevalent right now as emacs 29 is nearing release.
 However once you have a consistent system that works for you, you can use a combination of your =init.el= and the [[https://github.com/radian-software/straight.el#lockfile-management][straight.el lockfile]] to create a perfectly reproducible system.
 I still think =straight.el= is great but for a novice user, you could start with the built-in system if you find it overwhelming.
-That being said, the =init.el= associated with this repository is setup for =straight.el=.
 The differences between a =straight.el=-based config and a =package.el=-based config (as small as they are) are detailed throughout.
 
 First you'll need to create an [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Early-Init-File.html][early init file]] which is loaded before the graphical system or package manager.
 We just disable the built-in =package.el= in that file:
 
-#+BEGIN_SRC emacs-lisp :tangle early-init.el
+#+BEGIN_SRC emacs-lisp :tangle no
 (setq package-enable-at-startup nil)
 #+END_SRC
 
 Then similar to the built-in configuration, we bootstrap =straight.el=, install =use-package= and configure it to install packages by default:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (defvar bootstrap-version)
 (let ((bootstrap-file
        (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
@@ -248,7 +247,7 @@ This is often an issue on MacOS and can be quite frustrating for a new user.
 ** subword
 In programming modes, we want to navigate by subword (useful in camel-case languages):
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
 (use-package subword
   :ensure nil
   :hook prog-mode)
@@ -256,7 +255,7 @@ In programming modes, we want to navigate by subword (useful in camel-case langu
 
 Doing this with =straight.el= is slightly different:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (use-package subword
   :straight (:type built-in)
   :hook prog-mode)
@@ -265,7 +264,7 @@ Doing this with =straight.el= is slightly different:
 ** linum
 In programming modes, we want line numbers:
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
 (use-package linum
   :ensure nil
   :hook prog-mode)
@@ -273,7 +272,7 @@ In programming modes, we want line numbers:
 
 Doing this with =straight.el= is slightly different:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (use-package linum
   :straight (:type built-in)
   :hook prog-mode)
@@ -364,9 +363,9 @@ Embark has a lot more functionality but that is the basic gist of things.
 
   :config
   (add-to-list 'display-buffer-alist
-	     '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-	       nil
-	       (window-parameters (mode-line-format . none)))))
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none)))))
 #+END_SRC
 
 *** embark-consult
@@ -425,27 +424,9 @@ I don't think this is a critical package but I also don't take advantage of many
 
 Emacs has a powerful [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Undo.html][undo system]] but it can be very hard to keep track of the undo state.
 =vundo.el= solves this by providing a visual interface to the built-in undo system.
-The only problem is that vundo is not in a package repository.
-Depending on whether you are using =package.el= or =straight.el= will determine how you can use this package.
-
-*** package.el
-Following the guidelines for [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Lisp-Libraries.html][lisp libraries]], you need to download the source code for vundo which is contained in a single file; =vundo.el=.
-Alternatively you can clone the repository with git.
-In either case, you want it to end up in =~/.config/emacs/site-lisp/vundo/vundo.el=.
-Then we can tell =use-package= where to load the library from:
-
-#+BEGIN_SRC emacs-lisp :tangle no
-(use-package vundo
-  :load-path "site-lisp/vundo/"
-  :bind ("C-c u" . vundo))
-#+END_SRC
-
-*** straight.el
-=straight.el= already relies on git so we just need to tell it which repo the package is from:
 
 #+BEGIN_SRC emacs-lisp
 (use-package vundo
-  :straight (vundo :type git :host github :repo "casouri/vundo")
   :bind ("C-c u" . vundo))
 #+END_SRC
 
@@ -532,3 +513,36 @@ You can define modes that you want to be excluded from that blanket assumption.
 =flymake-mode= is a example of a minor mode that display helpful information in the mode line.
 It shows the number of errors and warnings in the buffer.
 We can just add it as a member of the ~minions-prominent-modes~ so it is always displayed when active.
+
+* Managing keybindings
+Emacs has a *lot* of keybindings.
+You'll learn common operations (switching buffers and opening files) quickly.
+For operations that you perform very infrequently, the =M-x= command menu works well as a command palette.
+However I find there are a couple issues you'll face with this system.
+This is by no means unique to emacs but it is more apparent in emacs since every possible operation is a function.
+First a command palette only has value if you know roughly what you are searching for.
+It isn't a great medium for discovery.
+If you've never used an LSP client, you won't know to search for ~eglot-format-buffer~ when you want LSP-powered formatting.
+However, it not feasible to bind every operation to a keybinding or to remember all those bindings.
+
+The alternative is contextual keybindings.
+Emacs already has this to some extent since keys are bound based on the active modes.
+You can even add discoverability to this using something like [[https://github.com/justbur/emacs-which-key][which-key]].
+This is a simple approach but has a few flaws.
+For one, *all* available keybindings are displayed in an unorganized way.
+This leads to cluttered view and it isn't easy to quickly find an operation you actually care about.
+In addition you still need to use one of the keybindings available in the standard [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Key-Binding-Conventions.html][keybinding conventions]] for every operation.
+
+With a little more work, we can create contextual keybindings with better menu's and fewer keybindings.
+There are two solutions: [[https://github.com/abo-abo/hydra][hydra]] and [[https://github.com/magit/transient][transient]].
+Both are very similar and support all the features I find important.
+=Hydra= uses colored letters to indicate how the letters will affect the hydra menu.
+For example a =blue= key will exit the menu after running, a =red= key will keep it open, etc.
+In addition, hydras gives you a lot of control over formatting (at least the parent hydra) so you can have keys layed out in a navigational pattern for example.
+=Transient= is less flexible in terms of the display but supports infix commands natively.
+This means it is great for creating interfaces to CLI commands where you might want to enable a flag while running a command (it was designed for the [[https://magit.vc/][magit]] git client after all).
+I actually prefer =Transient= because it's less flexible layout means you can more easily add additional commands to a previously defined prefix.
+Adding additional options to a hydra using a =hydra+= means the additional commands lie outside your prior defined formatting.
+I've also faced a few bugs in hydra with certain commands that I don't experience in transient.
+Unfortunately transient is a complex project and was not designed initially as a user-configuration tool.
+The documentation is more dense.

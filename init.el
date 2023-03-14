@@ -1,18 +1,15 @@
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 6))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
+(require 'package)
 
-(straight-use-package 'use-package)
-(setq straight-use-package-by-default t)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+(package-initialize)
+
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+(require 'use-package)
+(setq use-package-always-ensure t)
 
 (setq-default
  coding-system-for-read 'utf-8                 ; Use UTF-8 by default
@@ -70,11 +67,11 @@
     (exec-path-from-shell-initialize)))
 
 (use-package subword
-  :straight (:type built-in)
+  :ensure nil
   :hook prog-mode)
 
 (use-package linum
-  :straight (:type built-in)
+  :ensure nil
   :hook prog-mode)
 
 (use-package vertico
@@ -116,9 +113,9 @@
 
   :config
   (add-to-list 'display-buffer-alist
-	     '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-	       nil
-	       (window-parameters (mode-line-format . none)))))
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none)))))
 
 (use-package embark-consult
   :hook
@@ -141,7 +138,6 @@
 (use-package tree-sitter-langs)
 
 (use-package vundo
-  :straight (vundo :type git :host github :repo "casouri/vundo")
   :bind ("C-c u" . vundo))
 
 (use-package magit)
