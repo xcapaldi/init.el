@@ -1,21 +1,3 @@
-(require 'use-package)
-
-(require 'package)
-(setq package-enable-at-startup nil)
-(add-to-list 'package-archives
-             '("melpa" . "https://melpa.org/packages/"))
-
-(package-initialize)
-
-(require 'use-package)
-
-(unless (package-installed-p 'vc-use-package)
-  (package-vc-install "https://github.com/slotThe/vc-use-package"))
-
-(use-package no-littering
-  :ensure t)
-  :config (no-littering-theme-backups))
-
 (use-package emacs
   :config
   (setq-default
@@ -23,7 +5,7 @@
    coding-system-for-write 'utf-8
    cursor-in-non-selected-windows t  ; Don't hide the cursor in inactive windows
    help-window-select t              ; Focus new help windows when opened
-   indent-tabs-mode -1               ; Use spaces by default instead of tabs
+   indent-tabs-mode nil              ; Use spaces by default instead of tabs
    tab-width 4                       ; Set width for tabs
    indicate-empty-lines t            ; Display bitmap in left fringe on empty lines
    indicate-buffer-boundaries 'left  ; Indicate last newline in buffer
@@ -36,10 +18,7 @@
    vc-follow-symlinks t              ; Don't ask for confirmation following symlinked files
    sentence-end-double-space nil     ; Sentences end with punctuation and a single space
    show-paren-delay 0)               ; No delay on highlighting matching paren
-
   (fset 'yes-or-no-p 'y-or-n-p)  ; Replace yes/no prompts with y/n
-
-  ;; global modes
   (column-number-mode 1)                   ; Show the column number in modeline
   (tool-bar-mode 1)                        ; Show the toolbar
   (menu-bar-mode 1)                        ; Show the menubar
@@ -54,10 +33,7 @@
   (tooltip-mode -1)                        ; Hide mouse hover tooltips
   (global-visual-line-mode -1)             ; Wrap lines instead of extending past view
   (auto-fill-mode -1)                      ; Don't auto-wrap lines
-
-  ;; load theme
   (load-theme 'modus-vivendi t)
-
   ;; only enable font if available on system
   (when (member "Unifont" (font-family-list))
     (set-frame-font "Unifont-12:regular" nil t)
@@ -68,19 +44,20 @@
   (set-fontset-font t 'symbol (font-spec :family "Apple Color Emoji") nil 'prepend)
   ;; set line spacing (0.1 == 1x)
   (setq-default line-spacing 0.1)
-
-  ;; rebind keys on MacOS
   (when (equal system-type 'darwin)
-  (setq mac-command-modifier 'meta)
-  (setq mac-option-modifier 'super))
-
-    ;; disable lockfiles
+    (setq mac-command-modifier 'meta)
+    (setq mac-option-modifier 'super))
+  ;; write auto-saves and backups to separate directory
+  (make-directory "~/.tmp/emacs/auto-save/" t)
+  (make-directory "~/.tmp/emacs/backup/" t)
+  (setq auto-save-file-name-transforms '((".*" "~/.tmp/emacs/auto-save/" t)))
+  (setq backup-directory-alist '(("." . "~/.tmp/emacs/backup/")))
+  
+  ;; do not move the current file while creating backup
+  (setq backup-by-copying t)
+  
+  ;; disable lockfiles
   (setq create-lockfiles nil))
-
-(use-package corfu
-  :ensure t
-  :init
-  (global-corfu-mode))
 
 (use-package dired
   :ensure nil
@@ -91,22 +68,10 @@
   :ensure nil
   :hook (prog-mode . display-line-numbers-mode))
 
-(use-package dumb-jump
-  :ensure t
-  :after xref
-  :custom (dumb-jump-force-searcher 'rg)
-  :config (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
-
 (use-package eglot
   :ensure nil)
   ;;:hook (python-mode
   ;;       c-mode))
-
-(use-package exec-path-from-shell
-  :ensure t
-  :init
-  (when (memq window-system '(mac ns x))
-    (exec-path-from-shell-initialize)))
 
 (use-package hippie-exp
   :ensure nil
@@ -116,70 +81,16 @@
   :ensure nil
   :bind ([remap list-buffers] . ibuffer)) ;; C-x C-b
 
-(use-package minions
-  :ensure t
+(use-package icomplete
+  :ensure nil
+  ;; M-TAB is the normal keybind but often conflicts with window managers
+  :bind (:map icomplete-minibuffer-map
+			  ("M-j" . icomplete-force-complete))
   :init
-  (minions-mode 1)
+  (icomplete-mode) ;; or icomplete-vertical-mode
   :custom
-  (minions-prominent-modes '(flymake-mode)))
+  (completion-styles '(flex basic)))
 
 (use-package subword
   :ensure nil
   :hook prog-mode)
-
-(use-package vundo
-  :ensure t
-  :bind ("C-c u" . vundo))
-
-(use-package vertico
-  :ensure t
-  :init
-  (vertico-mode))
-
-(use-package marginalia
-  :ensure t
-  :bind (:map minibuffer-local-map
-              ("M-A" . marginalia-cycle))
-  :init
-  (marginalia-mode))
-
-(use-package consult
-  :ensure t
-  :bind (([remap switch-to-buffer] . consult-buffer)
-         ([remap switch-to-buffer-other-window] . consult-buffer-other-window)
-         ([remap switch-to-buffer-other-frame] . consult-buffer-other-frame)
-         ([remap bookmark-jump] . consult-bookmark)
-         ([remap project-switch-to-buffer] . consult-project-buffer)
-         ([remap yank-pop] . consult-yank-pop)
-         :map isearch-mode-map
-         ([remap isearch-edit-string] . consult-isearch-history)
-         ("C-c l" . consult-line)
-         ("C-c L" . consult-line-multi)
-         :map minibuffer-local-map
-         ([remap next-matching-history-element] . consult-history)
-         ([remap previous-matching-history-element] . consult-history)))
-
-(use-package orderless
-  :ensure t
-  :custom
-  (completion-styles '(orderless basic))
-  (completion-category-defaults nil)
-  (completion-category-overrides '((file (styles . (partial-completion))))))
-
-(use-package embark
-  :ensure t
-  :bind
-  (("C-." . embark-act)
-   ("C-;" . embark-dwim)
-   ("C-h B" . embark-bindings))
-
-  :config
-  (add-to-list 'display-buffer-alist
-               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-                 nil
-                 (window-parameters (mode-line-format . none)))))
-
-(use-package embark-consult
-  :ensure t
-  :hook
-  (embark-collect-mode . consult-preview-at-point-mode))
