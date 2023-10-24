@@ -7,13 +7,15 @@
 
 (package-initialize)
 
+(setq custom-file (concat user-emacs-directory "custom.el"))
+
 (require 'use-package)
 
 (unless (package-installed-p 'vc-use-package)
   (package-vc-install "https://github.com/slotThe/vc-use-package"))
 
 (use-package no-littering
-  :ensure t)
+  :ensure t
   :config (no-littering-theme-backups))
 
 (use-package emacs
@@ -116,6 +118,9 @@
   :ensure nil
   :bind ([remap list-buffers] . ibuffer)) ;; C-x C-b
 
+(use-package magit
+  :ensure t)
+
 (use-package minions
   :ensure t
   :init
@@ -130,6 +135,10 @@
 (use-package vundo
   :ensure t
   :bind ("C-c u" . vundo))
+
+(use-package browse-at-remote
+  :ensure t
+  :bind ("C-c g g" . browse-at-remote))
 
 (use-package vertico
   :ensure t
@@ -166,20 +175,4 @@
   (completion-category-defaults nil)
   (completion-category-overrides '((file (styles . (partial-completion))))))
 
-(use-package embark
-  :ensure t
-  :bind
-  (("C-." . embark-act)
-   ("C-;" . embark-dwim)
-   ("C-h B" . embark-bindings))
-
-  :config
-  (add-to-list 'display-buffer-alist
-               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-                 nil
-                 (window-parameters (mode-line-format . none)))))
-
-(use-package embark-consult
-  :ensure t
-  :hook
-  (embark-collect-mode . consult-preview-at-point-mode))
+(load custom-file)

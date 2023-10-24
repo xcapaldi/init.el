@@ -414,6 +414,14 @@ After running your configuration for the first time, you'll see something like t
 #+END_SRC
 
 As the comments state, you should not modify it.
+However this is very annoying if you have your config under version control.
+Instead we can tell Emacs to use a separate file for customizations:
+
+#+BEGIN_SRC emacs-lisp
+(setq custom-file (concat user-emacs-directory "custom.el"))
+#+END_SRC
+
+We'll want to load that customization file at the end of this configuration.
 
 ** Package configuration manager
 We still use [[https://github.com/jwiegley/use-package][use-package]] which can also integrate with =package.el= to trigger installation of packages.
@@ -619,7 +627,7 @@ This is often an issue on MacOS and can be quite frustrating for a new user.
 Emacs already has several features built-in for version control.
 If you're using git most of the time, consider using =magit= which a very powerful git porcelain.
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
 (use-package magit
   :ensure t)
 #+END_SRC
@@ -675,6 +683,19 @@ Emacs has a powerful [[https://www.gnu.org/software/emacs/manual/html_node/emacs
   :bind ("C-c u" . vundo))
 #+END_SRC
 
+** Browse remote code
+It can be helpful to jump directly to hosted remote code from your local
+checkout.
+
+#+BEGIN_SRC emacs-lisp
+(use-package browse-at-remote
+  :ensure t
+  :bind ("C-c g g" . browse-at-remote))
+#+END_SRC
+
+#+RESULTS:
+: browse-at-remote
+
 ** Improved completions
 We can install a family of packages that will greatly modernize completions over =icomplete= et al.
 
@@ -692,7 +713,7 @@ Several competant Emacs users still rely on =icomplete= but I am more productive
   (vertico-mode))
 #+END_SRC
 
-** marginalia
+*** marginalia
 [[https://github.com/emacs-straight/marginalia]]
 
 =marginalia.el= adds additional information adjacent to minibuffer completions.
@@ -706,7 +727,7 @@ Several competant Emacs users still rely on =icomplete= but I am more productive
   (marginalia-mode))
 #+END_SRC
 
-** consult
+*** consult
 [[https://github.com/minad/consult]]
 
 =consult.el= provides many helpful commands to replace the built-ins.
@@ -732,7 +753,7 @@ As you gain experience you can add more functionality to suit your needs.
          ([remap previous-matching-history-element] . consult-history)))
 #+END_SRC
 
-** orderless
+*** orderless
 [[https://github.com/oantolin/orderless]]
 
 The built-in completion styles are fine but once you've used =orderless= you will find any other completion style clunky.
@@ -748,40 +769,11 @@ As with everything in Emacs, this can be customed but the default works well.
   (completion-category-overrides '((file (styles . (partial-completion))))))
 #+END_SRC
 
-** embark
-[[https://github.com/oantolin/embark]]
-
-=embark= is like a context-aware right-click menu that is invoked via a keybinding.
-For example, you could place your point/cursor on a function in an elisp file and then call =embark-act=.
-It will display a set of options that are available in that context.
-Thus you could jump to the function definition without remembering the the keybinding or command to do so.
-Embark has a lot more functionality but that is the basic gist of things.
+** Load the customization file
+Now at the end of the config we can load the customization file:
 
 #+BEGIN_SRC emacs-lisp
-(use-package embark
-  :ensure t
-  :bind
-  (("C-." . embark-act)
-   ("C-;" . embark-dwim)
-   ("C-h B" . embark-bindings))
-
-  :config
-  (add-to-list 'display-buffer-alist
-               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-                 nil
-                 (window-parameters (mode-line-format . none)))))
-#+END_SRC
-
-*** embark-consult
-[[https://elpa.gnu.org/packages/embark-consult.html]]
-
-We can add the integration package between =embark= and =consult= as well.
-
-#+BEGIN_SRC emacs-lisp
-(use-package embark-consult
-  :ensure t
-  :hook
-  (embark-collect-mode . consult-preview-at-point-mode))
+(load custom-file)
 #+END_SRC
 
 * Managing keybindings
